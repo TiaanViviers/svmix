@@ -7,6 +7,13 @@ CC := gcc
 CFLAGS := -std=c99 -O2 -Wall -Wextra -Wpedantic -Werror
 LDFLAGS := -lm
 
+# Optional: Enable OpenMP for parallel ensemble stepping
+# Usage: make OPENMP=1 test
+ifdef OPENMP
+    CFLAGS += -fopenmp
+    LDFLAGS += -fopenmp
+endif
+
 # Directories
 SRC_DIR := src
 INCLUDE_DIR := include
@@ -25,6 +32,7 @@ SVMIX_OBJS := $(SVMIX_SRCS:$(SRC_DIR)/%.c=$(BIN_DIR)/%.o)
 TEST_STUDENT_T := $(TEST_DIR)/unit/test_student_t.c
 TEST_MODEL_SV := $(TEST_DIR)/unit/test_model_sv.c
 TEST_ENSEMBLE := $(TEST_DIR)/unit/test_ensemble.c
+TEST_ENSEMBLE_OPENMP := $(TEST_DIR)/unit/test_ensemble_openmp.c
 TEST_SV_FASTPF_SMOKE := $(TEST_DIR)/integration/test_sv_fastpf_smoke.c
 TEST_SV_FASTPF_DETERMINISM := $(TEST_DIR)/integration/test_sv_fastpf_determinism.c
 
@@ -65,6 +73,10 @@ $(BIN_DIR)/test_model_sv: $(TEST_MODEL_SV) $(SVMIX_OBJS) $(FASTPF_LIB) | $(BIN_D
 $(BIN_DIR)/test_ensemble: $(TEST_ENSEMBLE) $(SVMIX_OBJS) $(FASTPF_LIB) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -I$(SRC_DIR) -I$(FASTPF_DIR)/include $(TEST_ENSEMBLE) $(SVMIX_OBJS) $(FASTPF_LIB) -o $@ $(LDFLAGS)
 
+# Build test_ensemble_openmp (only useful with OPENMP=1)
+$(BIN_DIR)/test_ensemble_openmp: $(TEST_ENSEMBLE_OPENMP) $(SVMIX_OBJS) $(FASTPF_LIB) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -I$(SRC_DIR) -I$(FASTPF_DIR)/include $(TEST_ENSEMBLE_OPENMP) $(SVMIX_OBJS) $(FASTPF_LIB) -o $@ $(LDFLAGS)
+
 # Build test_sv_fastpf_smoke
 $(BIN_DIR)/test_sv_fastpf_smoke: $(TEST_SV_FASTPF_SMOKE) $(SVMIX_OBJS) $(FASTPF_LIB) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -I$(SRC_DIR) -I$(FASTPF_DIR)/include $(TEST_SV_FASTPF_SMOKE) $(SVMIX_OBJS) $(FASTPF_LIB) -o $@ $(LDFLAGS)
@@ -83,13 +95,16 @@ test-model-sv: $(BIN_DIR)/test_model_sv
 test-ensemble: $(BIN_DIR)/test_ensemble
 	@./$(BIN_DIR)/test_ensemble
 
+test-ensemble-openmp: $(BIN_DIR)/test_ensemble_openmp
+	@./$(BIN_DIR)/test_ensemble_openmp
+
 test-smoke: $(BIN_DIR)/test_sv_fastpf_smoke
 	@./$(BIN_DIR)/test_sv_fastpf_smoke
 
 test-determinism: $(BIN_DIR)/test_sv_fastpf_determinism
 	@./$(BIN_DIR)/test_sv_fastpf_determinism
 
-test-unit: test-student-t test-model-sv test-ensemble
+test-unit: test-student-t test-model-sv test-ensemble test-ensemble-openmp
 
 test-integration: test-smoke test-determinism
 
@@ -109,7 +124,12 @@ help:
 	@echo "  test-student-t   - Run Student-t log-PDF tests"
 	@echo "  test-model-sv    - Run SV model callback tests"
 	@echo "  test-ensemble    - Run ensemble tests"
+	@echo "  test-ensemble-openmp - Run OpenMP-specific tests (requires OPENMP=1)"
 	@echo "  test-smoke       - Run SV+fastpf smoke tests"
 	@echo "  test-determinism - Run determinism tests"
 	@echo "  clean            - Remove build artifacts"
 	@echo "  help             - Show this help message"
+	@echo ""
+	@echo "Options:"
+	@echo "  OPENMP=1         - Enable OpenMP for parallel ensemble stepping"
+	@echo "                     Example: make OPENMP=1 test-ensemble"
