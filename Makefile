@@ -30,6 +30,7 @@ TEST_MODEL_SV := $(TEST_DIR)/unit/test_model_sv.c
 TEST_ENSEMBLE := $(TEST_DIR)/unit/test_ensemble.c
 TEST_ENSEMBLE_OPENMP := $(TEST_DIR)/unit/test_ensemble_openmp.c
 TEST_SVMIX_API := $(TEST_DIR)/unit/test_svmix_api.c
+TEST_CHECKPOINT := $(TEST_DIR)/unit/test_checkpoint.c
 TEST_SV_FASTPF_SMOKE := $(TEST_DIR)/integration/test_sv_fastpf_smoke.c
 TEST_SV_FASTPF_DETERMINISM := $(TEST_DIR)/integration/test_sv_fastpf_determinism.c
 
@@ -37,9 +38,9 @@ TEST_SV_FASTPF_DETERMINISM := $(TEST_DIR)/integration/test_sv_fastpf_determinism
 EXAMPLE_BASIC := $(EXAMPLE_DIR)/example_basic_usage.c
 
 # Targets
-.PHONY: all clean test test-unit test-integration test-student-t test-model-sv test-ensemble test-ensemble-openmp test-svmix-api test-smoke test-determinism fastpf examples
+.PHONY: all clean test test-unit test-integration test-student-t test-model-sv test-ensemble test-ensemble-openmp test-svmix-api test-checkpoint test-smoke test-determinism fastpf examples
 
-all: $(BIN_DIR)/test_student_t $(BIN_DIR)/test_model_sv $(BIN_DIR)/test_ensemble $(BIN_DIR)/test_ensemble_openmp $(BIN_DIR)/test_svmix_api $(BIN_DIR)/test_sv_fastpf_smoke $(BIN_DIR)/test_sv_fastpf_determinism
+all: $(BIN_DIR)/test_student_t $(BIN_DIR)/test_model_sv $(BIN_DIR)/test_ensemble $(BIN_DIR)/test_ensemble_openmp $(BIN_DIR)/test_svmix_api $(BIN_DIR)/test_checkpoint $(BIN_DIR)/test_sv_fastpf_smoke $(BIN_DIR)/test_sv_fastpf_determinism
 
 # Build fastpf library
 fastpf: $(FASTPF_LIB)
@@ -81,6 +82,10 @@ $(BIN_DIR)/test_ensemble_openmp: $(TEST_ENSEMBLE_OPENMP) $(SVMIX_OBJS) $(FASTPF_
 $(BIN_DIR)/test_svmix_api: $(TEST_SVMIX_API) $(SVMIX_OBJS) $(FASTPF_LIB) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -I$(SRC_DIR) -I$(FASTPF_DIR)/include $(TEST_SVMIX_API) $(SVMIX_OBJS) $(FASTPF_LIB) -o $@ $(LDFLAGS)
 
+# Build test_checkpoint
+$(BIN_DIR)/test_checkpoint: $(TEST_CHECKPOINT) $(SVMIX_OBJS) $(FASTPF_LIB) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -I$(SRC_DIR) -I$(FASTPF_DIR)/include $(TEST_CHECKPOINT) $(SVMIX_OBJS) $(FASTPF_LIB) -o $@ $(LDFLAGS)
+
 # Build test_sv_fastpf_smoke
 $(BIN_DIR)/test_sv_fastpf_smoke: $(TEST_SV_FASTPF_SMOKE) $(SVMIX_OBJS) $(FASTPF_LIB) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -I$(SRC_DIR) -I$(FASTPF_DIR)/include $(TEST_SV_FASTPF_SMOKE) $(SVMIX_OBJS) $(FASTPF_LIB) -o $@ $(LDFLAGS)
@@ -111,13 +116,16 @@ test-ensemble-openmp: $(BIN_DIR)/test_ensemble_openmp
 test-svmix-api: $(BIN_DIR)/test_svmix_api
 	@./$(BIN_DIR)/test_svmix_api
 
+test-checkpoint: $(BIN_DIR)/test_checkpoint
+	@./$(BIN_DIR)/test_checkpoint
+
 test-smoke: $(BIN_DIR)/test_sv_fastpf_smoke
 	@./$(BIN_DIR)/test_sv_fastpf_smoke
 
 test-determinism: $(BIN_DIR)/test_sv_fastpf_determinism
 	@./$(BIN_DIR)/test_sv_fastpf_determinism
 
-test-unit: test-student-t test-model-sv test-ensemble test-ensemble-openmp test-svmix-api
+test-unit: test-student-t test-model-sv test-ensemble test-ensemble-openmp test-svmix-api test-checkpoint
 
 test-integration: test-smoke test-determinism
 
@@ -133,6 +141,7 @@ TEST_BINS := $(BIN_DIR)/test_student_t \
              $(BIN_DIR)/test_ensemble \
              $(BIN_DIR)/test_ensemble_openmp \
              $(BIN_DIR)/test_svmix_api \
+             $(BIN_DIR)/test_checkpoint \
              $(BIN_DIR)/test_sv_fastpf_smoke \
              $(BIN_DIR)/test_sv_fastpf_determinism
 

@@ -145,6 +145,28 @@ static int g_current_test_failed = 0;  /* Flag: did current test fail? */
         } \
     } while (0)
 
+/**
+ * @brief Assert that two doubles are bit-exact equal (for determinism tests).
+ * Uses memcmp to ensure exact bit-level equality.
+ */
+#define ASSERT_EQ_DOUBLE(a, b) \
+    do { \
+        double _a = (a); \
+        double _b = (b); \
+        if (memcmp(&_a, &_b, sizeof(double)) != 0) { \
+            union { double d; unsigned long long u; } _ua, _ub; \
+            _ua.d = _a; _ub.d = _b; \
+            printf(TEST_COLOR_RED "FAIL" TEST_COLOR_RESET "\n"); \
+            fprintf(stderr, TEST_COLOR_RED "  ASSERTION FAILED: %s == %s (bit-exact)\n" TEST_COLOR_RESET, #a, #b); \
+            fprintf(stderr, "  Expected: %.17g (0x%016llx)\n", _ub.d, _ub.u); \
+            fprintf(stderr, "  Actual:   %.17g (0x%016llx)\n", _ua.d, _ua.u); \
+            fprintf(stderr, "  at %s:%d in test %s\n", __FILE__, __LINE__, g_current_test); \
+            g_test_failed++; \
+            g_current_test_failed = 1; \
+            return; \
+        } \
+    } while (0)
+
 /* ========================================================================
  * Test suite runner
  * ======================================================================== */

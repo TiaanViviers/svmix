@@ -392,7 +392,6 @@ svmix_t* svmix_load_checkpoint(const char* filepath, svmix_status_t* status_out)
     /* Allocate models array */
     ens->models = (ensemble_model_t*)calloc(K, sizeof(ensemble_model_t));
     if (!ens->models) {
-        free(scores);
         status = SVMIX_ERR_ALLOC_FAILED;
         goto cleanup;
     }
@@ -409,14 +408,12 @@ svmix_t* svmix_load_checkpoint(const char* filepath, svmix_status_t* status_out)
         /* Read parameter block size */
         uint32_t param_size_marker;
         if (fread(&param_size_marker, sizeof(param_size_marker), 1, fp) != 1) {
-            free(scores);
             status = SVMIX_ERR_FILE_IO;
             goto cleanup;
         }
 
         /* Validate parameter size matches spec */
         if (param_size_marker != param_size) {
-            free(scores);
             status = SVMIX_ERR_CHECKPOINT_CORRUPT;
             goto cleanup;
         }
@@ -424,7 +421,6 @@ svmix_t* svmix_load_checkpoint(const char* filepath, svmix_status_t* status_out)
         /* Allocate SV context */
         sv_model_ctx_t* ctx = (sv_model_ctx_t*)malloc(sizeof(sv_model_ctx_t));
         if (!ctx) {
-            free(scores);
             status = SVMIX_ERR_ALLOC_FAILED;
             goto cleanup;
         }
@@ -432,12 +428,32 @@ svmix_t* svmix_load_checkpoint(const char* filepath, svmix_status_t* status_out)
         /* Read SV parameters (direct struct access!) */
         if (fread(ctx, param_size, 1, fp) != 1) {
             free(ctx);
-            free(scores);
             status = SVMIX_ERR_FILE_IO;
             goto cleanup;
         }
 
         model->sv_ctx = ctx;
+
+        /* Get fastpf callbacks for this model */
+        fastpf_model_t fastpf_model;
+        void* recreated_ctx = sv_model_create(
+            ctx->mu_h,
+            ctx->phi_h,
+            ctx->sigma_h,
+            ctx->nu,
+            &fastpf_model
+        );
+        
+        if (!recreated_ctx) {
+            /* sv_model_create failed - free ctx and abort */
+            free(ctx);
+            model->sv_ctx = NULL;
+            status = SVMIX_ERR_INVALID_PARAM;
+            goto cleanup;
+        }
+        
+        /* We already have ctx allocated, so free the one sv_model_create made */
+        free(recreated_ctx);
 
         /* Copy to sv_params array */
         sv_params[i].mu_h = ctx->mu_h;
@@ -447,11 +463,14 @@ svmix_t* svmix_load_checkpoint(const char* filepath, svmix_status_t* status_out)
 
         /* Set score */
         model->score = scores[i];
+        
+        /* Initialize model->pf with zero state */
+        memset(&model->pf, 0, sizeof(fastpf_t));
+        model->pf.model = fastpf_model;  /* CRITICAL: Set callbacks before restore! */
 
         /* Read fastpf blob size */
         uint64_t blob_size_marker;
         if (fread(&blob_size_marker, sizeof(blob_size_marker), 1, fp) != 1) {
-            free(scores);
             status = SVMIX_ERR_FILE_IO;
             goto cleanup;
         }
@@ -459,24 +478,28 @@ svmix_t* svmix_load_checkpoint(const char* filepath, svmix_status_t* status_out)
         /* Read fastpf blob */
         void* blob = malloc(blob_size_marker);
         if (!blob) {
-            free(scores);
             status = SVMIX_ERR_ALLOC_FAILED;
             goto cleanup;
         }
 
         if (fread(blob, 1, blob_size_marker, fp) != blob_size_marker) {
             free(blob);
-            free(scores);
             status = SVMIX_ERR_FILE_IO;
             goto cleanup;
         }
 
         /* Restore fastpf state (pattern 1: load into uninitialized pf) */
-        int fastpf_status = fastpf_checkpoint_read(&model->pf, NULL, blob, blob_size_marker);
+        /* Note: fastpf_checkpoint_read requires cfg when pf is uninitialized */
+        fastpf_cfg_t pf_cfg;
+        fastpf_cfg_init(&pf_cfg, N, sizeof(double));
+        pf_cfg.rng_seed = 0;  /* Will be overwritten from checkpoint */
+        pf_cfg.resample_threshold = 0.5;
+        pf_cfg.num_threads = ens_config.num_threads;
+        
+        int fastpf_status = fastpf_checkpoint_read(&model->pf, &pf_cfg, blob, blob_size_marker);
         free(blob);
 
         if (fastpf_status != FASTPF_SUCCESS) {
-            free(scores);
             /* Map fastpf errors to svmix errors */
             switch (fastpf_status) {
                 case FASTPF_ERR_CHECKPOINT_MAGIC:
