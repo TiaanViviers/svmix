@@ -4,6 +4,7 @@
  */
 
 #include "ensemble.h"
+#include "ensemble_internal.h"
 #include "model_sv.h"
 #include "../third_party/fastpf/src/fastpf_internal.h"  /* For stack allocation */
 
@@ -16,18 +17,6 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-
-/* ========================================================================
- * Internal ensemble structure
- * ======================================================================== */
-
-struct ensemble_t {
-    size_t K;                        /**< Number of models */
-    ensemble_model_t* models;        /**< Array of K models */
-    double* weights;                 /**< Current weights w_i (size K) */
-    ensemble_config_t config;        /**< Hyperparameters */
-    size_t timestep;                 /**< Number of steps processed */
-};
 
 /* ========================================================================
  * Helper: log-stable softmax with anti-starvation mixing

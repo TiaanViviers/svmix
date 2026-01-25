@@ -9,29 +9,12 @@
  */
 
 #include "model_sv.h"
+#include "model_sv_internal.h"
 #include "util.h"
 #include "../third_party/fastpf/include/fastpf.h"
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-
-/* ========================================================================
- * SV Model Context
- * ======================================================================== */
-
-/**
- * @brief Stochastic Volatility model parameters.
- *
- * Defines a single SV model with:
- * - AR(1) latent dynamics: h_t = mu_h + phi_h * (h_{t-1} - mu_h) + sigma_h * eta_t
- * - Student-t observation model: r_t ~ StudentT(nu, loc=0, scale=exp(h_t/2))
- */
-struct sv_model_ctx_t {
-    double mu_h;      /**< Long-run mean of log-variance. */
-    double phi_h;     /**< Persistence parameter in (0, 1). */
-    double sigma_h;   /**< Process noise standard deviation (> 0). */
-    double nu;        /**< Student-t degrees of freedom (> 2). */
-};
 
 /* ========================================================================
  * fastpf Callback: Prior Sampling

@@ -12,24 +12,13 @@
  */
 
 #include "svmix.h"
+#include "svmix_internal.h"
 #include "ensemble.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
-
-/* ========================================================================
- * Internal structure (opaque to users)
- * ======================================================================== */
-
-struct svmix_t {
-    ensemble_t* ensemble;       /**< Underlying ensemble */
-    svmix_cfg_t config;         /**< User configuration (for checkpointing) */
-    sv_params_t* sv_params;     /**< SV parameters for K models (owned) */
-    unsigned long* seeds;       /**< RNG seeds (owned, for checkpointing) */
-    size_t timestep;            /**< Number of steps processed */
-};
 
 /* ========================================================================
  * Version
@@ -285,28 +274,10 @@ size_t svmix_get_timestep(const svmix_t* svmix) {
 }
 
 /* ========================================================================
- * Checkpointing (stub for now - will implement after API tests)
+ * Checkpointing
  * ======================================================================== */
 
-svmix_status_t svmix_save_checkpoint(const svmix_t* svmix, const char* filepath) {
-    if (!svmix || !filepath) {
-        return SVMIX_ERR_NULL_POINTER;
-    }
-    
-    /* TODO: Implement in next session */
-    (void)svmix;
-    (void)filepath;
-    return SVMIX_ERR_INTERNAL;  /* Not yet implemented */
-}
-
-svmix_t* svmix_load_checkpoint(const char* filepath, svmix_status_t* status) {
-    if (!filepath) {
-        if (status) *status = SVMIX_ERR_NULL_POINTER;
-        return NULL;
-    }
-    
-    /* TODO: Implement in next session */
-    (void)filepath;
-    if (status) *status = SVMIX_ERR_INTERNAL;  /* Not yet implemented */
-    return NULL;
-}
+/* Implemented in checkpoint.c - declarations in checkpoint.h */
+/* Prototypes here to avoid circular include */
+svmix_status_t svmix_save_checkpoint(const svmix_t* svmix, const char* filepath);
+svmix_t* svmix_load_checkpoint(const char* filepath, svmix_status_t* status);

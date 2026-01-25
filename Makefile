@@ -21,7 +21,7 @@ BIN_DIR := bin
 FASTPF_LIB := $(FASTPF_DIR)/bin/libfastpf.a
 
 # Source files
-SVMIX_SRCS := $(SRC_DIR)/util.c $(SRC_DIR)/model_sv.c $(SRC_DIR)/ensemble.c $(SRC_DIR)/svmix.c
+SVMIX_SRCS := $(SRC_DIR)/util.c $(SRC_DIR)/model_sv.c $(SRC_DIR)/ensemble.c $(SRC_DIR)/svmix.c $(SRC_DIR)/checkpoint.c
 SVMIX_OBJS := $(SVMIX_SRCS:$(SRC_DIR)/%.c=$(BIN_DIR)/%.o)
 
 # Test files
