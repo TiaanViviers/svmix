@@ -22,6 +22,7 @@
 #include <stdbool.h>
 
 #include "fastpf.h"
+#include "../third_party/fastpf/src/fastpf_internal.h"
 
 /* Forward declarations */
 struct sv_model_ctx_t;
@@ -86,9 +87,12 @@ typedef struct {
  * Self-contained: each model owns its PF instance, parameter context,
  * and score accumulator. This makes it easy to add new model types
  * (VOL_DRIFT, etc.) without changing ensemble logic.
+ * 
+ * NOTE: fastpf_t is embedded directly (not a pointer) for simpler
+ * memory management and better cache locality.
  */
 typedef struct {
-    fastpf_t* pf;                     /**< Particle filter instance (owned) */
+    fastpf_t pf;                      /**< Particle filter instance (embedded) */
     struct sv_model_ctx_t* sv_ctx;    /**< SV parameters (owned by ensemble) */
     double score;                     /**< Accumulated score S_i */
 } ensemble_model_t;

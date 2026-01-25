@@ -199,20 +199,6 @@ ensemble_t* ensemble_create(
     for (size_t i = 0; i < K; i++) {
         ensemble_model_t* model = &ens->models[i];
         
-        /* Allocate particle filter */
-        model->pf = (fastpf_t*)malloc(sizeof(fastpf_t));
-        if (!model->pf) {
-            /* Clean up previous models */
-            for (size_t j = 0; j < i; j++) {
-                free(ens->models[j].pf);
-                free(ens->models[j].sv_ctx);
-            }
-            free(ens->weights);
-            free(ens->models);
-            free(ens);
-            return NULL;
-        }
-        
         /* Create SV model context */
         fastpf_model_t fastpf_model;
         model->sv_ctx = sv_model_create(
@@ -224,10 +210,9 @@ ensemble_t* ensemble_create(
         );
         
         if (!model->sv_ctx) {
-            /* Validation failed - clean up and return */
-            free(model->pf);
+            /* Validation failed - clean up previous models and return */
             for (size_t j = 0; j < i; j++) {
-                free(ens->models[j].pf);
+                fastpf_free(&ens->models[j].pf);
                 free(ens->models[j].sv_ctx);
             }
             free(ens->weights);
@@ -236,19 +221,18 @@ ensemble_t* ensemble_create(
             return NULL;
         }
         
-        /* Initialize particle filter */
+        /* Initialize particle filter (embedded in the struct) */
         fastpf_cfg_t pf_config;
         fastpf_cfg_init(&pf_config, num_particles, sizeof(double));  /* 1D state: h_t */
         pf_config.rng_seed = seeds[i];
         pf_config.resample_threshold = 0.5;
         pf_config.num_threads = config->num_threads;
         
-        if (fastpf_init(model->pf, &pf_config, &fastpf_model) != 0) {
-            /* PF init failed - clean up */
-            free(model->pf);
+        if (fastpf_init(&model->pf, &pf_config, &fastpf_model) != 0) {
+            /* PF init failed - clean up and return */
             free(model->sv_ctx);
             for (size_t j = 0; j < i; j++) {
-                free(ens->models[j].pf);
+                fastpf_free(&ens->models[j].pf);
                 free(ens->models[j].sv_ctx);
             }
             free(ens->weights);
@@ -273,10 +257,8 @@ void ensemble_free(ensemble_t* ens) {
     
     if (ens->models) {
         for (size_t i = 0; i < ens->K; i++) {
-            /* Free particle filter */
-            if (ens->models[i].pf) {
-                free(ens->models[i].pf);
-            }
+            /* Free particle filter's internal arrays */
+            fastpf_free(&ens->models[i].pf);
             /* Free SV context */
             if (ens->models[i].sv_ctx) {
                 free(ens->models[i].sv_ctx);
@@ -313,14 +295,14 @@ int ensemble_step(ensemble_t* ens, double observation) {
         ensemble_model_t* model = &ens->models[i];
         
         /* Run particle filter step */
-        if (fastpf_step(model->pf, &observation) != 0) {
+        if (fastpf_step(&model->pf, &observation) != 0) {
             /* Step failed - set score to -inf to down-weight this model */
             model->score = -DBL_MAX;
             continue;
         }
         
         /* Extract log_norm_const from diagnostics */
-        const fastpf_diagnostics_t* diag = fastpf_get_diagnostics(model->pf);
+        const fastpf_diagnostics_t* diag = fastpf_get_diagnostics(&model->pf);
         
         /* Update score with exponential forgetting */
         model->score = ens->config.lambda * model->score + diag->log_norm_const;
@@ -391,7 +373,7 @@ ensemble_belief_t ensemble_get_belief(const ensemble_t* ens) {
         const double w = ens->weights[i];
         
         /* Get particle weights from PF */
-        const double* pf_weights = fastpf_get_weights(model->pf);
+        const double* pf_weights = fastpf_get_weights(&model->pf);
         
         if (!pf_weights) {
             continue;
@@ -399,16 +381,16 @@ ensemble_belief_t ensemble_get_belief(const ensemble_t* ens) {
         
         /* Compute posterior mean of h for this model */
         double mean_h_i = 0.0;
-        size_t N = model->pf->cfg.n_particles;
+        size_t N = model->pf.cfg.n_particles;
         for (size_t j = 0; j < N; j++) {
-            const double* particle = (const double*)fastpf_get_particle(model->pf, j);
+            const double* particle = (const double*)fastpf_get_particle(&model->pf, j);
             mean_h_i += pf_weights[j] * particle[0];
         }
         
         /* Compute posterior variance of h for this model */
         double var_h_i = 0.0;
         for (size_t j = 0; j < N; j++) {
-            const double* particle = (const double*)fastpf_get_particle(model->pf, j);
+            const double* particle = (const double*)fastpf_get_particle(&model->pf, j);
             double diff = particle[0] - mean_h_i;
             var_h_i += pf_weights[j] * diff * diff;
         }
