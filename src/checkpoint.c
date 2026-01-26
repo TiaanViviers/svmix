@@ -109,7 +109,14 @@ svmix_status_t svmix_save_checkpoint(const svmix_t* svmix, const char* filepath)
     }
 
     /* Write config (lambda, beta, epsilon, num_threads) */
-    if (fwrite(&ens->config, sizeof(ensemble_config_t), 1, fp) != 1) {
+    /* Zero padding bytes to avoid valgrind warnings */
+    ensemble_config_t config_copy;
+    memset(&config_copy, 0, sizeof(config_copy));
+    config_copy.lambda = ens->config.lambda;
+    config_copy.beta = ens->config.beta;
+    config_copy.epsilon = ens->config.epsilon;
+    config_copy.num_threads = ens->config.num_threads;
+    if (fwrite(&config_copy, sizeof(ensemble_config_t), 1, fp) != 1) {
         status = SVMIX_ERR_FILE_IO;
         goto cleanup;
     }
@@ -418,42 +425,32 @@ svmix_t* svmix_load_checkpoint(const char* filepath, svmix_status_t* status_out)
             goto cleanup;
         }
 
-        /* Allocate SV context */
-        sv_model_ctx_t* ctx = (sv_model_ctx_t*)malloc(sizeof(sv_model_ctx_t));
-        if (!ctx) {
-            status = SVMIX_ERR_ALLOC_FAILED;
-            goto cleanup;
-        }
-
-        /* Read SV parameters (direct struct access!) */
-        if (fread(ctx, param_size, 1, fp) != 1) {
-            free(ctx);
+        /* Read SV parameters into temporary struct */
+        sv_model_ctx_t temp_ctx;
+        if (fread(&temp_ctx, param_size, 1, fp) != 1) {
             status = SVMIX_ERR_FILE_IO;
             goto cleanup;
         }
 
-        model->sv_ctx = ctx;
-
-        /* Get fastpf callbacks for this model */
+        /* Create SV model context and get fastpf callbacks */
+        /* NOTE: sv_model_create allocates and validates the context */
         fastpf_model_t fastpf_model;
-        void* recreated_ctx = sv_model_create(
-            ctx->mu_h,
-            ctx->phi_h,
-            ctx->sigma_h,
-            ctx->nu,
+        sv_model_ctx_t* ctx = sv_model_create(
+            temp_ctx.mu_h,
+            temp_ctx.phi_h,
+            temp_ctx.sigma_h,
+            temp_ctx.nu,
             &fastpf_model
         );
         
-        if (!recreated_ctx) {
-            /* sv_model_create failed - free ctx and abort */
-            free(ctx);
-            model->sv_ctx = NULL;
+        if (!ctx) {
+            /* sv_model_create failed (invalid parameters) */
             status = SVMIX_ERR_INVALID_PARAM;
             goto cleanup;
         }
         
-        /* We already have ctx allocated, so free the one sv_model_create made */
-        free(recreated_ctx);
+        /* Assign to model - ownership transferred */
+        model->sv_ctx = ctx;
 
         /* Copy to sv_params array */
         sv_params[i].mu_h = ctx->mu_h;

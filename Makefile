@@ -168,7 +168,8 @@ MSAN_FLAGS := -fsanitize=memory -fno-omit-frame-pointer -g
 .PHONY: valgrind sanitizer asan ubsan check-memory
 
 # Run valgrind on all tests and examples
-valgrind: all examples .valgrind.supp
+# Note: Rebuilds without sanitizers to avoid ASan+Valgrind conflict
+valgrind: clean all examples .valgrind.supp
 	@echo "=========================================="
 	@echo "Running Valgrind on all tests and examples"
 	@echo "=========================================="
