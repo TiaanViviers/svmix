@@ -258,7 +258,8 @@ check-memory: valgrind sanitizer
 	@echo "=========================================="
 
 # Clean
-clean:
+clean: pyclean
+	@echo "Cleaning C build artifacts..."
 	rm -rf $(BIN_DIR)
 	rm -f .valgrind.supp *.valgrind.supp
 	@find . -maxdepth 1 -type f \( \
@@ -269,6 +270,7 @@ clean:
 		-name "helgrind.out.*" -o \
 		-name "drd.out.*" \
 	\) -delete
+	@echo "All artifacts cleaned"
 
 # Help
 help:
@@ -297,6 +299,13 @@ help:
 	@echo "  sanitizer        - Run ASan + UBSan together on all tests and examples"
 	@echo "  check-memory     - Run all memory checks (valgrind + sanitizers)"
 	@echo ""
+	@echo "Python targets:"
+	@echo "  pylib            - Build shared library for Python"
+	@echo "  pyinstall        - Install Python package (dev mode)"
+	@echo "  pywheel          - Build wheel for distribution"
+	@echo "  pytest           - Run Python test suite"
+	@echo "  pyclean          - Clean Python build artifacts"
+	@echo ""
 	@echo "Other targets:"
 	@echo "  clean            - Remove build artifacts"
 	@echo "  help             - Show this help message"
@@ -304,3 +313,96 @@ help:
 	@echo "Options:"
 	@echo "  OPENMP=1         - Enable OpenMP for parallel ensemble stepping"
 	@echo "                     Example: make OPENMP=1 test-ensemble"
+
+# =============================================================================
+# Python package targets
+# =============================================================================
+
+# Detect platform for shared library extension
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+    SHARED_EXT := .so
+    SHARED_FLAGS := -shared
+endif
+ifeq ($(UNAME_S),Darwin)
+    SHARED_EXT := .dylib
+    SHARED_FLAGS := -dynamiclib
+endif
+
+LIB_DIR := lib
+PYTHON_LIB_DIR := python/svmix/lib
+SHARED_LIB := $(LIB_DIR)/libsvmix$(SHARED_EXT)
+PYTHON_SHARED_LIB := $(PYTHON_LIB_DIR)/libsvmix$(SHARED_EXT)
+
+.PHONY: pylib pyinstall pywheel pytest pyclean
+.PHONY: python-lib python-install python-wheel python-test python-clean  # Legacy aliases
+
+# Build shared library for Python
+pylib: $(FASTPF_LIB) | $(BIN_DIR)
+	@echo "Building shared library for Python..."
+	@mkdir -p $(LIB_DIR) $(PYTHON_LIB_DIR)
+	$(CC) $(CFLAGS) -fPIC $(SHARED_FLAGS) \
+		-I$(INCLUDE_DIR) -I$(SRC_DIR) -I$(FASTPF_DIR)/include \
+		-Wl,-rpath,'$$ORIGIN' \
+		-o $(SHARED_LIB) \
+		$(SVMIX_SRCS) \
+		-Wl,--whole-archive $(FASTPF_LIB) -Wl,--no-whole-archive \
+		$(LDFLAGS)
+	cp $(SHARED_LIB) $(PYTHON_SHARED_LIB)
+	@echo "Shared library built: $(PYTHON_SHARED_LIB)"
+
+# Install Python package in editable mode (for development)
+pyinstall: pylib
+	@echo "Installing Python package (editable mode)..."
+	pip install -e python/
+	@echo ""
+	@echo "Python package installed!"
+	@echo "   Test: python -c 'import svmix; print(svmix.version())'"
+
+# Build Python wheel for distribution
+pywheel: pylib
+	@echo "Building Python wheel..."
+	cd python && python -m build --wheel
+	@echo ""
+	@echo "=========================================="
+	@echo "Wheel built successfully!"
+	@echo "=========================================="
+	@ls -lh python/dist/*.whl
+	@echo ""
+	@echo "Deploy to trading project:"
+	@echo "  1. cp python/dist/*.whl ~/trading-project/libs/"
+	@echo "  2. pip install libs/svmix-*.whl"
+
+# Run Python tests (fast)
+pytest: pylib
+	@echo "Running Python test suite..."
+	cd python && python -m pytest tests/ -v
+	@echo ""
+	@echo "All tests passed!"
+
+# Run Python tests with coverage
+pytest-cov: pylib
+	@echo "Running Python tests with coverage..."
+	cd python && python -m pytest tests/ -v --cov=svmix --cov-report=term-missing --cov-report=html
+	@echo ""
+	@echo "Coverage report: python/htmlcov/index.html"
+
+# Clean Python build artifacts
+pyclean:
+	@echo "Cleaning Python build artifacts..."
+	rm -rf $(LIB_DIR) $(PYTHON_LIB_DIR)
+	rm -rf python/build python/dist python/*.egg-info
+	rm -rf python/.pytest_cache python/htmlcov python/.coverage
+	find python -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find python -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
+	find python -name "*.pyc" -delete 2>/dev/null || true
+	find python -name "*.pyo" -delete 2>/dev/null || true
+	find python -name "*~" -delete 2>/dev/null || true
+	@echo "Python artifacts cleaned"
+
+# Legacy aliases for backwards compatibility
+python-lib: pylib
+python-install: pyinstall
+python-wheel: pywheel
+python-test: pytest
+python-clean: pyclean
