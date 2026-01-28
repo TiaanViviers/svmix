@@ -57,3 +57,7 @@ dkms.conf
 bin/
 __pycache__/
 .pytest_cache/
+.ipynb_checkpoints/
+
+*.npy
+*.csv

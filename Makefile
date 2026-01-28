@@ -337,19 +337,19 @@ PYTHON_SHARED_LIB := $(PYTHON_LIB_DIR)/libsvmix$(SHARED_EXT)
 .PHONY: pylib pyinstall pywheel pytest pyclean
 .PHONY: python-lib python-install python-wheel python-test python-clean  # Legacy aliases
 
-# Build shared library for Python
+# Build shared library for Python (with OpenMP enabled)
 pylib: $(FASTPF_LIB) | $(BIN_DIR)
-	@echo "Building shared library for Python..."
+	@echo "Building shared library for Python (with OpenMP support)..."
 	@mkdir -p $(LIB_DIR) $(PYTHON_LIB_DIR)
-	$(CC) $(CFLAGS) -fPIC $(SHARED_FLAGS) \
+	$(CC) $(CFLAGS) -fopenmp -fPIC $(SHARED_FLAGS) \
 		-I$(INCLUDE_DIR) -I$(SRC_DIR) -I$(FASTPF_DIR)/include \
 		-Wl,-rpath,'$$ORIGIN' \
 		-o $(SHARED_LIB) \
 		$(SVMIX_SRCS) \
 		-Wl,--whole-archive $(FASTPF_LIB) -Wl,--no-whole-archive \
-		$(LDFLAGS)
+		$(LDFLAGS) -fopenmp
 	cp $(SHARED_LIB) $(PYTHON_SHARED_LIB)
-	@echo "Shared library built: $(PYTHON_SHARED_LIB)"
+	@echo "Shared library built (with OpenMP) $(PYTHON_SHARED_LIB)"
 
 # Install Python package in editable mode (for development)
 pyinstall: pylib
@@ -380,12 +380,6 @@ pytest: pylib
 	@echo ""
 	@echo "All tests passed!"
 
-# Run Python tests with coverage
-pytest-cov: pylib
-	@echo "Running Python tests with coverage..."
-	cd python && python -m pytest tests/ -v --cov=svmix --cov-report=term-missing --cov-report=html
-	@echo ""
-	@echo "Coverage report: python/htmlcov/index.html"
 
 # Clean Python build artifacts
 pyclean:
@@ -399,10 +393,3 @@ pyclean:
 	find python -name "*.pyo" -delete 2>/dev/null || true
 	find python -name "*~" -delete 2>/dev/null || true
 	@echo "Python artifacts cleaned"
-
-# Legacy aliases for backwards compatibility
-python-lib: pylib
-python-install: pyinstall
-python-wheel: pywheel
-python-test: pytest
-python-clean: pyclean
