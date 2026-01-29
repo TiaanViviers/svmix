@@ -21,6 +21,19 @@ def main():
 def generate_synthetic_data(phi, sigma, nu, mu, T):
     """
     Generate synthetic log-volatility data using a stochastic volatility model.
+
+    Parameters:
+    -----------
+    phi : float
+        Persistence of volatility
+    sigma : float
+        Volatility of volatility
+    nu : float
+        Degrees of freedom
+    mu : float
+        Long-run mean of log-volatility
+    T : int
+        Number of time steps
     """
     np.random.seed(42)
 
@@ -35,7 +48,6 @@ def generate_synthetic_data(phi, sigma, nu, mu, T):
 
     # Generate observations from the true volatility
     observations = np.zeros(T)
-
     for t in range(T):
         # Sample standardized Student-t shock
         eta_t = stats.t.rvs(df=nu)
@@ -66,6 +78,9 @@ def write_data(data):
 
 
 def get_args():
+    """
+    Parse command line arguments.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--phi", type=float, default=0.97, help="Persistence of volatility")
     parser.add_argument("--sigma", type=float, default=0.20, help="Volatility of volatility")

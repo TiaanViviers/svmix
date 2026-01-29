@@ -14,6 +14,9 @@ SPEC = "vol"
 
 
 def main():
+    """
+    Main entry point for the thread benchmarking.
+    """
     print("=" * 60)
     print("Running thread benchmark with:")
     print(f"  Model counts: {MODEL_COUNTS}")
@@ -35,12 +38,7 @@ def main():
                 model = config_model(model_count, particle_count, thread_count)
                 elapsed_time = speed_test(model, observations)
                 config_results[thread_count] = elapsed_time
-                print_results(model_count, 
-                              particle_count, 
-                              thread_count, 
-                              elapsed_time, 
-                              len(observations)
-                )
+                print_results(model_count, particle_count, thread_count, elapsed_time, len(observations))
                 model.free()
             
             results.append({
@@ -56,7 +54,15 @@ def main():
 
 
 def speed_test(model, observations):
-    """Run speed tests on the model using the provided observations."""
+    """Run speed tests on the model using the provided observations.
+
+    Parameters:
+    -----------
+    model : Svmix
+        The Svmix model to test.
+    observations : np.ndarray
+        The synthetic observations to use for testing.
+    """
     start_t = time.perf_counter()
     
     for obs in observations:
@@ -65,16 +71,19 @@ def speed_test(model, observations):
     
     return elapsed
 
-def print_results(model_count, particle_count, thread_count, elapsed_time, num_obs):
-    """Print the results of the speed test."""
-    _str = f"Models: {model_count}, Particles: {particle_count}, \
-    Threads: {thread_count}, \
-    Total: {elapsed_time:.4f} s \
-    Per step: ~{elapsed_time / num_obs:.4f} s"
-    print(_str)
 
 def config_model(model_count, particle_count, thread_count):
-    """Configure the Svmix model."""
+    """Configure the Svmix model.
+    
+    Parameters:
+    -----------
+    model_count : int
+        The number of models to use.
+    particle_count : int
+        The number of particles to use.
+    thread_count : int
+        The number of threads to use.
+    """
     if SPEC == "vol":
         spec = Spec.VOL
     else:
@@ -88,7 +97,7 @@ def config_model(model_count, particle_count, thread_count):
         epsilon=1e-6,                   # Weight floor (anti-starvation)
         beta=1.0,                       # Tempering parameter
         num_threads=thread_count,
-        seed=42                         # Random seed for reproducibility
+        seed=42
     )
     
     # Generate parameter grid
@@ -100,14 +109,16 @@ def config_model(model_count, particle_count, thread_count):
         mu=-0.5
     )
 
-    return Svmix(config, params)  # config first, then params
+    return Svmix(config, params)
 
 
-def read_data():
-    """Read synthetic input data."""
-    data_dir = Path(__file__).parent.parent / "data"
-    filepath = data_dir / "synthetic.npy"
-    return np.load(filepath)
+def print_results(model_count, particle_count, thread_count, elapsed_time, num_obs):
+    """Print the results of the speed test."""
+    _str = f"Models: {model_count}, Particles: {particle_count}, \
+    Threads: {thread_count}, \
+    Total: {elapsed_time:.4f} s \
+    Per step: ~{elapsed_time / num_obs:.4f} s"
+    print(_str)
 
 
 def print_summary(results, num_obs):
@@ -160,6 +171,12 @@ def print_summary(results, num_obs):
         config_str = f"K={K:3d}, N={N:5d}"
         print(f"  {config_str:<25} {time_per_obs*1000:>6.2f} ms     {throughput:>8.1f} obs/s")
 
+
+def read_data():
+    """Read synthetic input data."""
+    data_dir = Path(__file__).parent.parent / "data"
+    filepath = data_dir / "synthetic.npy"
+    return np.load(filepath)
 
 if __name__ == "__main__":
     main()
