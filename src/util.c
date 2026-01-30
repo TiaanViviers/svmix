@@ -73,3 +73,52 @@ double svmix_t_logpdf_logvar(double x, double h, double nu) {
 
     return log_norm + log_kernel;
 }
+
+/* ========================================================================
+ * Numerical utilities
+ * ======================================================================== */
+
+/**
+ * @brief Compute log(Σ w_i * exp(x_i)) in a numerically stable way.
+ *
+ * See util.h for full documentation.
+ */
+double svmix_logsumexp_weighted(const double* log_values, const double* weights, size_t n) {
+    if (n == 0 || !log_values || !weights) {
+        return -INFINITY;
+    }
+    
+    /* Find maximum log value for numerical stability */
+    double max_log = -INFINITY;
+    for (size_t i = 0; i < n; i++) {
+        if (isfinite(log_values[i]) && isfinite(weights[i]) && weights[i] > 0.0) {
+            if (log_values[i] > max_log) {
+                max_log = log_values[i];
+            }
+        }
+    }
+    
+    /* If all values are non-finite or all weights are zero, return -inf */
+    if (!isfinite(max_log)) {
+        return -INFINITY;
+    }
+    
+    /* Compute sum of w_i * exp(x_i - max) */
+    double sum = 0.0;
+    for (size_t i = 0; i < n; i++) {
+        if (isfinite(log_values[i]) && isfinite(weights[i]) && weights[i] > 0.0) {
+            double diff = log_values[i] - max_log;
+            /* Avoid underflow for very negative differences */
+            if (diff > -700.0) {
+                sum += weights[i] * exp(diff);
+            }
+        }
+    }
+    
+    /* Return log(sum) + max = log(Σ w_i * exp(x_i)) */
+    if (sum > 0.0) {
+        return log(sum) + max_log;
+    }
+    
+    return -INFINITY;
+}

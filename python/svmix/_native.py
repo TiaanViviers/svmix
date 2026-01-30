@@ -163,6 +163,10 @@ _lib.svmix_get_weights.restype = ctypes.c_int
 _lib.svmix_get_num_models.argtypes = [ctypes.c_void_p]
 _lib.svmix_get_num_models.restype = ctypes.c_size_t
 
+# svmix_get_last_log_likelihood
+_lib.svmix_get_last_log_likelihood.argtypes = [ctypes.c_void_p]
+_lib.svmix_get_last_log_likelihood.restype = ctypes.c_double
+
 # svmix_save_checkpoint
 _lib.svmix_save_checkpoint.argtypes = [
     ctypes.c_void_p,
@@ -258,6 +262,15 @@ def get_weights(handle: int, num_models: int) -> tuple:
 def get_num_models(handle: int) -> int:
     """Get number of models."""
     return _lib.svmix_get_num_models(ctypes.c_void_p(handle))
+
+
+def get_last_log_likelihood(handle: int) -> float:
+    """Get last predictive log-likelihood.
+    
+    Returns the log p(y_t | y_{1:t-1}) from the most recent step.
+    Returns -inf if no observations have been processed yet.
+    """
+    return _lib.svmix_get_last_log_likelihood(ctypes.c_void_p(handle))
 
 
 def save_checkpoint(handle: int, filepath: str) -> int:

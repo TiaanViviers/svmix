@@ -395,12 +395,24 @@ svmix_t* svmix_load_checkpoint(const char* filepath, svmix_status_t* status_out)
     ens->timestep = timestep;
     ens->weights = weights;  /* Transfer ownership */
     ens->models = NULL;
+    ens->last_log_likelihoods = NULL;
 
     /* Allocate models array */
     ens->models = (ensemble_model_t*)calloc(K, sizeof(ensemble_model_t));
     if (!ens->models) {
         status = SVMIX_ERR_ALLOC_FAILED;
         goto cleanup;
+    }
+
+    /* Allocate last_log_likelihoods array (for PLL tracking) */
+    ens->last_log_likelihoods = (double*)malloc(K * sizeof(double));
+    if (!ens->last_log_likelihoods) {
+        status = SVMIX_ERR_ALLOC_FAILED;
+        goto cleanup;
+    }
+    /* Initialize to -INFINITY (no observations processed yet) */
+    for (size_t i = 0; i < K; i++) {
+        ens->last_log_likelihoods[i] = -INFINITY;
     }
 
     /* ====================================================================
@@ -548,6 +560,9 @@ cleanup:
         }
         if (ens->weights) {
             free(ens->weights);
+        }
+        if (ens->last_log_likelihoods) {
+            free(ens->last_log_likelihoods);
         }
         free(ens);
     }

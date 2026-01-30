@@ -14,11 +14,13 @@
 #include "svmix.h"
 #include "svmix_internal.h"
 #include "ensemble.h"
+#include "util.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
+#include <alloca.h>
 
 /* ========================================================================
  * Version
@@ -265,8 +267,35 @@ size_t svmix_get_num_models(const svmix_t* svmix) {
 }
 
 /* ========================================================================
- * svmix_get_timestep
+ * svmix_get_last_log_likelihood
  * ======================================================================== */
+
+double svmix_get_last_log_likelihood(const svmix_t* svmix) {
+    if (!svmix || !svmix->ensemble) {
+        return -INFINITY;
+    }
+    
+    size_t K = svmix->config.num_models;
+    
+    /* Get per-model log-likelihoods from last step */
+    double* log_liks = (double*)alloca(K * sizeof(double));
+    if (ensemble_get_last_log_likelihoods(svmix->ensemble, log_liks) == 0) {
+        return -INFINITY;
+    }
+    
+    /* Get current weights (from BEFORE last observation) */
+    double* weights = (double*)alloca(K * sizeof(double));
+    if (ensemble_get_weights(svmix->ensemble, weights) == 0) {
+        return -INFINITY;
+    }
+    
+    /* Compute mixture log-likelihood: log(Σ w_i * exp(ll_i)) */
+    return svmix_logsumexp_weighted(log_liks, weights, K);
+}
+
+/* ========================================================================
+ * svmix_get_timestep
+ * ========================================================================*/
 
 size_t svmix_get_timestep(const svmix_t* svmix) {
     if (!svmix) return 0;

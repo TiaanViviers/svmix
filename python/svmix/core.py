@@ -222,6 +222,35 @@ class Svmix:
             return np.array(weights)
         return weights
     
+    def get_last_log_likelihood(self) -> float:
+        """Get predictive log-likelihood from last step.
+        
+        Returns the one-step-ahead predictive log-likelihood
+        log p(y_t | y_{1:t-1}) from the most recent observation.
+        
+        This is the pure mixture predictive likelihood, NOT affected
+        by the exponential forgetting parameter lambda.
+        
+        Returns:
+            float: Log-likelihood value, or -inf if no observations processed yet
+            
+        Raises:
+            ValueError: If instance has been freed
+            
+        Example:
+            >>> for obs in observations:
+            ...     svmix.step(obs)
+            ...     pll = svmix.get_last_log_likelihood()
+            ...     print(f"PLL: {pll:.4f}")
+            
+        Note:
+            For cumulative log-likelihood over a sequence, sum the values:
+                total_pll = sum(svmix.get_last_log_likelihood() 
+                               after each step)
+        """
+        self._check_freed()
+        return _native.get_last_log_likelihood(self._handle)
+    
     def save_checkpoint(self, filepath: str):
         """Save complete filter state to file.
         

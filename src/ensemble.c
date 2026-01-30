@@ -172,9 +172,19 @@ ensemble_t* ensemble_create(
         return NULL;
     }
     
+    /* Allocate last_log_likelihoods array */
+    ens->last_log_likelihoods = (double*)malloc(K * sizeof(double));
+    if (!ens->last_log_likelihoods) {
+        free(ens->weights);
+        free(ens->models);
+        free(ens);
+        return NULL;
+    }
+    
     /* Initialize weights to uniform */
     for (size_t i = 0; i < K; i++) {
         ens->weights[i] = 1.0 / (double)K;
+        ens->last_log_likelihoods[i] = -INFINITY;
     }
     
     /* Configure OpenMP if enabled */
@@ -260,6 +270,10 @@ void ensemble_free(ensemble_t* ens) {
         free(ens->weights);
     }
     
+    if (ens->last_log_likelihoods) {
+        free(ens->last_log_likelihoods);
+    }
+    
     free(ens);
 }
 
@@ -287,14 +301,19 @@ int ensemble_step(ensemble_t* ens, double observation) {
         if (fastpf_step(&model->pf, &observation) != 0) {
             /* Step failed - set score to -inf to down-weight this model */
             model->score = -DBL_MAX;
+            ens->last_log_likelihoods[i] = -INFINITY;
             continue;
         }
         
         /* Extract log_norm_const from diagnostics */
         const fastpf_diagnostics_t* diag = fastpf_get_diagnostics(&model->pf);
+        double log_likelihood = diag->log_norm_const;
+        
+        /* Store per-model log-likelihood from this step */
+        ens->last_log_likelihoods[i] = log_likelihood;
         
         /* Update score with exponential forgetting */
-        model->score = ens->config.lambda * model->score + diag->log_norm_const;
+        model->score = ens->config.lambda * model->score + log_likelihood;
     }
     
     /* Collect scores for weight computation (serial) */
@@ -341,8 +360,19 @@ size_t ensemble_get_scores(const ensemble_t* ens, double* scores_out) {
 }
 
 /* ========================================================================
- * API: ensemble_get_belief
+ * API: ensemble_get_last_log_likelihoods
  * ======================================================================== */
+
+size_t ensemble_get_last_log_likelihoods(const ensemble_t* ens, double* lls_out) {
+    if (!ens || !lls_out) return 0;
+    
+    memcpy(lls_out, ens->last_log_likelihoods, ens->K * sizeof(double));
+    return ens->K;
+}
+
+/* ========================================================================
+ * API: ensemble_get_belief
+ * ========================================================================*/
 
 ensemble_belief_t ensemble_get_belief(const ensemble_t* ens) {
     ensemble_belief_t belief = {0};

@@ -43,11 +43,13 @@ struct ensemble_model_t {
  *   - Current weights (normalized, size K)
  *   - Configuration (lambda, beta, epsilon, num_threads)
  *   - Timestep counter
+ *   - Last step log-likelihoods (for PLL computation)
  */
 struct ensemble_t {
     size_t K;                        /**< Number of models */
     ensemble_model_t* models;        /**< Array of K models */
     double* weights;                 /**< Current weights w_i (size K) */
+    double* last_log_likelihoods;    /**< Per-model log p(y_t | y_{1:t-1}) from last step (size K) */
     ensemble_config_t config;        /**< Hyperparameters */
     size_t timestep;                 /**< Number of steps processed */
 };

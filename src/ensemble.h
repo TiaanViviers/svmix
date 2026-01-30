@@ -204,6 +204,21 @@ size_t ensemble_get_weights(const ensemble_t* ens, double* weights_out);
 size_t ensemble_get_scores(const ensemble_t* ens, double* scores_out);
 
 /**
+ * @brief Get per-model log-likelihoods from last step.
+ *
+ * Returns the log p(y_t | y_{1:t-1}, model_i) values from the most recent
+ * ensemble_step() call, before accumulation into scores.
+ *
+ * These are the raw predictive log-likelihoods (log_norm_const from fastpf),
+ * not exponentially weighted.
+ *
+ * @param ens Ensemble instance (not NULL)
+ * @param lls_out Output array of size K (not NULL)
+ * @return Number of models K, or 0 on error
+ */
+size_t ensemble_get_last_log_likelihoods(const ensemble_t* ens, double* lls_out);
+
+/**
  * @brief Compute mixture posterior belief.
  *
  * For each model i:

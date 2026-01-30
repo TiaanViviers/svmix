@@ -8,6 +8,8 @@
 #ifndef SVMIX_UTIL_H
 #define SVMIX_UTIL_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -57,6 +59,25 @@ extern "C" {
  * - Requires x is finite
  */
 double svmix_t_logpdf_logvar(double x, double h, double nu);
+
+/* ========================================================================
+ * Numerical utilities
+ * ======================================================================== */
+
+/**
+ * @brief Compute log(Σ w_i * exp(x_i)) in a numerically stable way.
+ *
+ * Computes: log(w_0 * exp(x_0) + w_1 * exp(x_1) + ... + w_{n-1} * exp(x_{n-1}))
+ *
+ * Uses the log-sum-exp trick with max subtraction for numerical stability.
+ * Weights do not need to sum to 1 (handles general weighted sums).
+ *
+ * @param log_values Array of log-space values (size n)
+ * @param weights Array of non-negative weights (size n)
+ * @param n Number of elements
+ * @return log(weighted sum), or -INFINITY if all terms are invalid
+ */
+double svmix_logsumexp_weighted(const double* log_values, const double* weights, size_t n);
 
 #ifdef __cplusplus
 }

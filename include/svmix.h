@@ -290,6 +290,35 @@ svmix_status_t svmix_get_belief(const svmix_t* svmix, svmix_belief_t* belief);
 svmix_status_t svmix_get_weights(const svmix_t* svmix, double* weights, size_t K);
 
 /**
+ * @brief Get mixture predictive log-likelihood from last step.
+ *
+ * Returns log p(y_t | y_{1:t-1}) from the most recent svmix_step() call.
+ * This is the pure predictive log-likelihood of the mixture model, computed as:
+ *
+ *   log p(y_t | y_{1:t-1}) = log[Σ_i w_{i,t-1} * p(y_t | y_{1:t-1}, model_i)]
+ *
+ * where w_{i,t-1} are the weights BEFORE observing y_t.
+ *
+ * This value is NOT affected by the exponential forgetting factor (lambda).
+ * It represents the pure one-step-ahead predictive likelihood.
+ *
+ * @param svmix Instance (not NULL)
+ * @return Log-likelihood from last step, or -INFINITY if unavailable
+ *
+ * Returns -INFINITY if:
+ *   - svmix is NULL
+ *   - No steps have been taken yet
+ *   - All models failed on the last step
+ *
+ * Example:
+ *   for each observation:
+ *       double pll = svmix_get_last_log_likelihood(sv);
+ *       svmix_step(sv, observation);
+ *       // pll contains log p(observation | previous observations)
+ */
+double svmix_get_last_log_likelihood(const svmix_t* svmix);
+
+/**
  * @brief Get number of models in ensemble.
  *
  * @param svmix Instance (not NULL)
