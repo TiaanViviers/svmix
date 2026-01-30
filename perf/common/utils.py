@@ -10,6 +10,9 @@ from pathlib import Path
 sys.path.insert(0, '../../python')
 from svmix import Svmix, SvmixConfig, SvParams, Spec
 
+# Import synthetic data generator (relative import from same directory)
+from .synthetic import generate_quick
+
 
 def config_model(model_count, particle_count, thread_count, seed=42, spec="vol"):
     """
@@ -87,23 +90,34 @@ def speed_test(model, observations):
     return elapsed
 
 
-def read_data(filename="synthetic.npy"):
+def read_data(filename=None, T=500, seed=42):
     """
-    Read synthetic benchmark data.
+    Generate synthetic benchmark data.
+    
+    This function generates data programmatically using the SyntheticDataGenerator.
+    The 'filename' parameter is kept for backward compatibility but is ignored.
     
     Parameters:
     -----------
-    filename : str
-        Name of data file in perf/data/
+    filename : str, optional
+        Ignored (kept for backward compatibility)
+    T : int
+        Number of observations to generate (default: 500)
+    seed : int
+        Random seed for reproducibility (default: 42)
     
     Returns:
     --------
     np.ndarray
         Time series observations
+        
+    Example:
+        >>> observations = read_data(T=1000)
+        >>> print(f"Generated {len(observations)} observations")
     """
-    data_dir = Path(__file__).parent.parent / "data"
-    filepath = data_dir / filename
-    return np.load(filepath)
+    # Generate data using the new programmatic API
+    observations = generate_quick(T=T, seed=seed)
+    return observations
 
 
 
