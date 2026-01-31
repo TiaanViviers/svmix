@@ -163,6 +163,10 @@ _lib.svmix_get_weights.restype = ctypes.c_int
 _lib.svmix_get_num_models.argtypes = [ctypes.c_void_p]
 _lib.svmix_get_num_models.restype = ctypes.c_size_t
 
+# svmix_get_timestep
+_lib.svmix_get_timestep.argtypes = [ctypes.c_void_p]
+_lib.svmix_get_timestep.restype = ctypes.c_size_t
+
 # svmix_get_last_log_likelihood
 _lib.svmix_get_last_log_likelihood.argtypes = [ctypes.c_void_p]
 _lib.svmix_get_last_log_likelihood.restype = ctypes.c_double
@@ -262,6 +266,11 @@ def get_weights(handle: int, num_models: int) -> tuple:
 def get_num_models(handle: int) -> int:
     """Get number of models."""
     return _lib.svmix_get_num_models(ctypes.c_void_p(handle))
+
+
+def get_timestep(handle: int) -> int:
+    """Get number of observations processed."""
+    return _lib.svmix_get_timestep(ctypes.c_void_p(handle))
 
 
 def get_last_log_likelihood(handle: int) -> float:

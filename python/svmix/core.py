@@ -318,6 +318,56 @@ class Svmix:
         """Get number of models in ensemble."""
         return self._num_models
     
+    @property
+    def timestep(self) -> int:
+        """Get number of observations processed.
+        
+        Returns:
+            Number of times step() has been called successfully
+            
+        Example:
+            >>> svmix.step(0.01)
+            >>> svmix.step(0.02)
+            >>> svmix.timestep
+            2
+        """
+        self._check_freed()
+        return _native.get_timestep(self._handle)
+    
+    @property
+    def effective_num_models(self) -> float:
+        """Compute effective number of active models.
+        
+        Uses inverse Simpson's index: 1 / sum(w_i^2)
+        
+        This measures ensemble diversity:
+        - Value of 1: Collapsed to single model (all weight on one model)
+        - Value of K: Uniform diversity (equal weight across all models)
+        - Typical healthy range: 5-15 for K=50-150
+        
+        Returns:
+            Effective number of models (between 1 and K)
+            
+        Example:
+            >>> weights = svmix.get_weights()
+            >>> # If weights = [0.7, 0.2, 0.1]
+            >>> svmix.effective_num_models
+            1.85  # ~ 2 models are active
+            
+        Note:
+            Sudden drops in this value indicate the ensemble is
+            collapsing to a single model, which may signal need
+            for re-initialization or parameter adjustment.
+        """
+        self._check_freed()
+        
+        weights = self.get_weights()
+        
+        if HAS_NUMPY:
+            return float(1.0 / np.sum(weights ** 2))
+        else:
+            return 1.0 / sum(w**2 for w in weights)
+    
     def __repr__(self):
         if self._freed:
             return "Svmix(freed)"
