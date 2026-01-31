@@ -35,7 +35,7 @@ TEST_SV_FASTPF_SMOKE := $(TEST_DIR)/integration/test_sv_fastpf_smoke.c
 TEST_SV_FASTPF_DETERMINISM := $(TEST_DIR)/integration/test_sv_fastpf_determinism.c
 
 # Example files
-EXAMPLE_BASIC := $(EXAMPLE_DIR)/example_basic_usage.c
+EXAMPLE_BASIC := $(EXAMPLE_DIR)/basic_C_usage.c
 
 # Targets
 .PHONY: all clean test test-unit test-integration test-student-t test-model-sv test-ensemble test-ensemble-openmp test-svmix-api test-checkpoint test-smoke test-determinism fastpf examples
@@ -95,9 +95,9 @@ $(BIN_DIR)/test_sv_fastpf_determinism: $(TEST_SV_FASTPF_DETERMINISM) $(SVMIX_OBJ
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -I$(SRC_DIR) -I$(FASTPF_DIR)/include $(TEST_SV_FASTPF_DETERMINISM) $(SVMIX_OBJS) $(FASTPF_LIB) -o $@ $(LDFLAGS)
 
 # Build examples
-examples: $(BIN_DIR)/example_basic_usage
+examples: $(BIN_DIR)/basic_C_usage
 
-$(BIN_DIR)/example_basic_usage: $(EXAMPLE_BASIC) $(SVMIX_OBJS) $(FASTPF_LIB) | $(BIN_DIR)
+$(BIN_DIR)/basic_C_usage: $(EXAMPLE_BASIC) $(SVMIX_OBJS) $(FASTPF_LIB) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -I$(SRC_DIR) -I$(FASTPF_DIR)/include $(EXAMPLE_BASIC) $(SVMIX_OBJS) $(FASTPF_LIB) -o $@ $(LDFLAGS)
 
 # Run tests
@@ -146,7 +146,7 @@ TEST_BINS := $(BIN_DIR)/test_student_t \
              $(BIN_DIR)/test_sv_fastpf_determinism
 
 # Example binaries to check
-EXAMPLE_BINS := $(BIN_DIR)/example_basic_usage
+EXAMPLE_BINS := $(BIN_DIR)/basic_C_usage
 
 # All binaries to check
 ALL_CHECK_BINS := $(TEST_BINS) $(EXAMPLE_BINS)

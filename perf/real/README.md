@@ -87,6 +87,36 @@ python garch_comparison.py
 - Coverage: +2.7pp better calibration
 - VaR: More conservative (safer for risk management)
 
+### Phase 4: Long-Term Persistence
+
+Tests multi-year continuous operation without re-estimation or intervention.
+
+**Command:**
+```bash
+python long_term_test.py --data path/to/your/data --K 150 --N 500
+```
+
+**Test Dataset:**
+- US30 1min level data from 2020-2025 ( 1,736,469 observations)
+- 1,806 days continuous operation
+- No parameter re-estimation
+- No manual intervention
+
+**Results:**
+- Mean PLL: 7.26 (stable throughout)
+- Coverage: 97.1% (consistent across full period)
+- VaR violations: 2.5%
+- Processing rate: 524 obs/s
+
+**Key Findings:**
+- No significant performance degradation over 5 years
+- PLL trend: +0.001 per window (slight improvement)
+- Coverage drift: +0.0008% per window (stable)
+- Only 1 of 347 rolling windows showed calibration concerns
+- Ensemble weight concentration reflects adaptive behavior, not failure
+
+**Conclusion:** Validates "no re-estimation needed" claim for autonomous operation.
+
 ## Methodology
 
 ### Evaluation Protocol
@@ -146,6 +176,13 @@ Standard in academic literature and comparable to GARCH benchmarks.
 - Compares against GARCH(1,1) baselines
 - Uses arch package for GARCH estimation
 - Outputs: Side-by-side comparison, statistical tests, improvement metrics
+
+**long_term_test.py** - Phase 4 benchmark
+- Tests multi-year continuous operation (5 years, 1.7M observations)
+- Monitors ensemble health and calibration stability
+- Detects performance drift and ensemble collapse
+- Validates autonomous operation without intervention
+- Outputs: Rolling metrics, ensemble health, temporal stability analysis
 
 ## Production Configuration
 
