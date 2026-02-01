@@ -13,31 +13,27 @@ from .types import Spec
 @dataclass
 class SvmixConfig:
     """Configuration for svmix filter creation.
-    
-    Attributes:
-        spec: Model specification (VOL, DRIFT, VOL_DRIFT)
-        num_models: Number of models in ensemble (K)
-        num_particles: Number of particles per model (N)
-        lambda_: Exponential forgetting factor (0 < lambda <= 1)
-                 Recommended: 0.99-0.999 for minute-frequency data
-        beta: Softmax temperature for model weighting (beta > 0)
-              Recommended: 0.5-1.0 to prevent premature convergence
-        epsilon: Anti-starvation mixing weight (0 <= epsilon < 1)
-                 Each model gets at least epsilon/K weight
-                 Recommended: 0.01-0.05
-        num_threads: OpenMP thread count (0=auto, >0=explicit)
-                     Only used if compiled with OpenMP support
-        seed: Random seed for reproducibility (0=random)
-    
-    Example:
-        >>> config = SvmixConfig(
-        ...     spec=Spec.VOL,
-        ...     num_models=50,
-        ...     num_particles=1000,
-        ...     lambda_=0.99,
-        ...     beta=0.8,
-        ...     epsilon=0.02
-        ... )
+
+    Args:
+        spec: Model specification (currently only Spec.VOL supported).
+        num_models: Number of models in ensemble (K). Typical: 20-150.
+        num_particles: Number of particles per model (N). Typical: 250-500.
+        lambda_: Exponential forgetting factor in (0, 1]. Typical: 0.99-0.999.
+        beta: Softmax temperature (> 0). Typical: 0.5-1.0.
+        epsilon: Anti-starvation weight floor in [0, 1). Typical: 0.02-0.10.
+        num_threads: OpenMP thread count. 0=auto, >0=explicit.
+        seed: Random seed for reproducibility. 0=random.
+
+    Example::
+
+        config = SvmixConfig(
+            spec=Spec.VOL,
+            num_models=50,
+            num_particles=500,
+            lambda_=0.995,
+            beta=0.8,
+            epsilon=0.05
+        )
     """
     spec: Spec
     num_models: int

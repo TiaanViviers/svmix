@@ -1,7 +1,5 @@
 """
-Parameter generation utilities for svmix.
-
-Provides convenient ways to create parameter grids for model ensembles.
+Parameter generation utilities for svmix model ensembles.
 """
 
 from dataclasses import dataclass
@@ -48,20 +46,17 @@ def _to_list(val: Union[float, List[float]]) -> List[float]:
 
 @dataclass
 class SvParamsVol:
-    """Parameters for SPEC_VOL (V1: Stochastic Volatility).
-    
-    Attributes:
-        phi: Mean reversion rate (0 < phi < 1)
-             Higher = slower mean reversion
-        sigma: Volatility of volatility (sigma > 0)
-               Controls volatility clustering strength
-        nu: Student-t degrees of freedom (nu > 2)
-            Lower = fatter tails
-        mu: Long-run mean of log-volatility (any real)
-            Typically negative (e.g., -0.5)
-    
-    Example:
-        >>> params = SvParamsVol(phi=0.97, sigma=0.2, nu=10, mu=-0.5)
+    """Stochastic volatility model parameters.
+
+    Args:
+        phi: Persistence (0 < phi < 1). Higher = slower mean reversion.
+        sigma: Volatility of volatility (sigma > 0).
+        nu: Student-t degrees of freedom (nu > 2). Lower = fatter tails.
+        mu: Long-run mean of log-volatility. Typically negative.
+
+    Example::
+
+        params = SvParamsVol(phi=0.97, sigma=0.2, nu=10, mu=-0.5)
     """
     phi: float
     sigma: float
@@ -69,11 +64,7 @@ class SvParamsVol:
     mu: float
     
     def validate(self):
-        """Validate parameter constraints.
-        
-        Raises:
-            ValueError: If parameters violate constraints
-        """
+        """Validate parameter constraints. Raises ValueError if invalid."""
         if not (0 < self.phi < 1):
             raise ValueError(f"phi must be in (0, 1), got {self.phi}")
         
@@ -94,40 +85,31 @@ class SvParamsVol:
                  sigma: Union[float, Tuple[float, float]],
                  nu: Union[float, Tuple[float, float]],
                  mu: Union[float, Tuple[float, float]]) -> List['SvParamsVol']:
-        """Generate parameters with evenly spaced values.
-        
-        For each parameter:
-        - If float: use same value for all models
-        - If (min, max) tuple: linearly space num_models points
-        
+        """Generate parameters with linearly spaced values.
+
+        For each parameter, pass a float for a constant value or a
+        (min, max) tuple to linearly interpolate across num_models.
+
         Args:
-            num_models: Number of parameter sets to generate
-            phi: Single value or (min, max) range
-            sigma: Single value or (min, max) range
-            nu: Single value or (min, max) range
-            mu: Single value or (min, max) range
-            
+            num_models: Number of parameter sets to generate.
+            phi: Constant or (min, max) range.
+            sigma: Constant or (min, max) range.
+            nu: Constant or (min, max) range.
+            mu: Constant or (min, max) range.
+
         Returns:
-            List of SvParamsVol instances
-            
-        Example:
-            >>> # 50 models varying only phi
-            >>> params = SvParamsVol.linspace(
-            ...     num_models=50,
-            ...     phi=(0.90, 0.99),
-            ...     sigma=0.2,
-            ...     nu=10,
-            ...     mu=-0.5
-            ... )
-            
-            >>> # 20 models varying phi and sigma
-            >>> params = SvParamsVol.linspace(
-            ...     num_models=20,
-            ...     phi=(0.90, 0.99),
-            ...     sigma=(0.1, 0.3),
-            ...     nu=10,
-            ...     mu=-0.5
-            ... )
+            List of num_models SvParamsVol instances.
+
+        Example::
+
+            # 50 models varying phi from 0.90 to 0.99
+            params = SvParamsVol.linspace(
+                num_models=50,
+                phi=(0.90, 0.99),
+                sigma=0.2,
+                nu=10,
+                mu=-0.5
+            )
         """
         if num_models <= 0:
             raise ValueError(f"num_models must be > 0, got {num_models}")
@@ -160,28 +142,28 @@ class SvParamsVol:
              sigma: Union[float, List[float]],
              nu: Union[float, List[float]],
              mu: Union[float, List[float]]) -> List['SvParamsVol']:
-        """Generate full Cartesian product grid of parameters.
-        
-        Creates all combinations of the provided parameter values.
-        Number of models = len(phi) × len(sigma) × len(nu) × len(mu)
-        
+        """Generate Cartesian product grid of parameters.
+
+        Creates all combinations: len(phi) * len(sigma) * len(nu) * len(mu).
+
         Args:
-            phi: Single value or list of values
-            sigma: Single value or list of values
-            nu: Single value or list of values
-            mu: Single value or list of values
-            
+            phi: Value or list of values.
+            sigma: Value or list of values.
+            nu: Value or list of values.
+            mu: Value or list of values.
+
         Returns:
-            List of all parameter combinations
-            
-        Example:
-            >>> # 3×4×5×1 = 60 models
-            >>> params = SvParamsVol.grid(
-            ...     phi=[0.95, 0.97, 0.99],
-            ...     sigma=[0.1, 0.2, 0.3, 0.4],
-            ...     nu=[5, 10, 15, 20, 25],
-            ...     mu=-0.5
-            ... )
+            List of all parameter combinations.
+
+        Example::
+
+            # 3 * 3 * 1 * 1 = 9 models
+            params = SvParamsVol.grid(
+                phi=[0.95, 0.97, 0.99],
+                sigma=[0.1, 0.2, 0.3],
+                nu=10,
+                mu=-0.5
+            )
         """
         phi_list = _to_list(phi)
         sigma_list = _to_list(sigma)

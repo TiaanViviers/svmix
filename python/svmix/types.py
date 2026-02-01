@@ -21,17 +21,17 @@ class Spec(IntEnum):
 
 class Status(IntEnum):
     """Status codes returned by svmix operations.
-    
+
     Matches svmix_status_t enum in C.
     """
     OK = 0
     ERR_NULL_POINTER = -1
     ERR_INVALID_PARAM = -2
     ERR_ALLOC_FAILED = -3
-    ERR_INTERNAL = -4
-    ERR_FILE_IO = -5
-    ERR_CHECKPOINT_CORRUPT = -6
-    ERR_VERSION_MISMATCH = -7
+    ERR_FILE_IO = -4
+    ERR_CHECKPOINT_CORRUPT = -5
+    ERR_VERSION_MISMATCH = -6
+    ERR_INTERNAL = -99
 
 
 @dataclass
@@ -98,15 +98,14 @@ class SvmixVersionMismatchError(SvmixError):
     pass
 
 
-# Map status codes to exceptions
 _STATUS_TO_EXCEPTION = {
     Status.ERR_NULL_POINTER: SvmixNullPointerError,
     Status.ERR_INVALID_PARAM: SvmixInvalidParamError,
     Status.ERR_ALLOC_FAILED: SvmixAllocError,
-    Status.ERR_INTERNAL: SvmixInternalError,
     Status.ERR_FILE_IO: SvmixFileIOError,
     Status.ERR_CHECKPOINT_CORRUPT: SvmixCheckpointCorruptError,
     Status.ERR_VERSION_MISMATCH: SvmixVersionMismatchError,
+    Status.ERR_INTERNAL: SvmixInternalError,
 }
 
 

@@ -59,6 +59,10 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 
+# Sphinx documentation
+python/docs/_build/
+python/docs/_static/
+
 *.npy
 *.csv
 *.html

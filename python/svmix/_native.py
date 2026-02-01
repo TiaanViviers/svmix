@@ -70,7 +70,7 @@ def _find_library() -> str:
     
     raise FileNotFoundError(
         f"Could not find {lib_name}. "
-        "Make sure to run 'make python-lib' before using the Python package, "
+        "Run 'make pylib' from the project root before using the Python package, "
         "or set SVMIX_LIB_PATH environment variable."
     )
 
