@@ -104,6 +104,18 @@ The documentation includes:
 
 ## Quick Start
 
+### Important: Use Log Returns
+
+**CRITICAL**: svmix expects **log returns**, not simple/percentage returns:
+
+```python
+import numpy as np
+returns = np.log(prices / prices.shift(1))  # CORRECT
+# NOT: returns = prices.pct_change()        # WRONG
+```
+
+Why? The stochastic volatility model is mathematically specified for log returns, which are time-additive and exhibit the symmetry properties required by the model. Using simple returns introduces bias that increases with return magnitude. See the [Data Requirements](python/docs/data_requirements.rst) documentation for detailed explanation.
+
 ### Python
 
 ```python

@@ -131,7 +131,7 @@ def run_basic_validation(
             })
             
         except Exception as e:
-            print(f"\n❌ ERROR: {e}")
+            print(f"\n ERROR: {e}")
             import traceback
             traceback.print_exc()
             results.append({

@@ -4,6 +4,13 @@ Quick Start
 This guide covers the essential workflow for using svmix to estimate
 stochastic volatility from return data.
 
+.. important::
+
+   **Use Log Returns**: svmix expects log returns, not simple returns.
+   Compute returns as ``np.log(prices / prices.shift(1))``, NOT
+   ``prices.pct_change()``. See :doc:`data_requirements` for why this
+   is critical.
+
 Basic Usage
 -----------
 

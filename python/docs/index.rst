@@ -13,6 +13,7 @@ uncertainty quantification and protection against parameter misspecification.
    :caption: Contents
 
    quickstart
+   data_requirements
    api/index
    theory
 
