@@ -60,21 +60,32 @@ The ``Belief`` object contains the posterior estimates:
 
    belief = sv.get_belief()
 
-   # Model-averaged volatility estimate
-   print(f"Volatility: {belief.vol:.4f}")
-
-   # Model-averaged log-volatility
-   print(f"Log-volatility: {belief.log_vol:.4f}")
-
-   # Model-averaged parameters
-   print(f"mu: {belief.mu:.4f}")
-   print(f"phi: {belief.phi:.4f}")
-   print(f"sigma: {belief.sigma:.4f}")
-   print(f"nu: {belief.nu:.4f}")
+   # Volatility estimates
+   print(f"Volatility: {belief.vol:.4f}")       # Annualized %
+   print(f"Log-volatility: {belief.log_vol:.4f}")  # log scale
+   
+   # Raw posterior moments
+   print(f"Mean h: {belief.mean_h:.4f}")       # E[h_t | data]
+   print(f"Var h: {belief.var_h:.4f}")         # Var[h_t | data]
+   print(f"Mean sigma: {belief.mean_sigma:.4f}") # E[exp(h_t/2)]
 
 The volatility estimate is computed as a weighted average across all
 models, where weights reflect each model's posterior probability given
 the observed data.
+
+Weighted Parameters
+-------------------
+
+Get Bayesian Model Average (BMA) parameter estimates:
+
+.. code-block:: python
+
+   weighted = sv.get_weighted_params()
+   
+   print(f"Weighted phi: {weighted['phi']:.4f}")    # Persistence
+   print(f"Weighted sigma: {weighted['sigma']:.4f}") # Vol-of-vol
+   print(f"Weighted nu: {weighted['nu']:.2f}")      # Tail heaviness
+   print(f"Weighted mu: {weighted['mu']:.4f}")      # Long-run mean
 
 Model Weights
 -------------
@@ -90,13 +101,35 @@ combinations best explain the data:
    best_idx = np.argmax(weights)
    print(f"Best model: {params[best_idx]}")
    print(f"Weight: {weights[best_idx]:.4f}")
+   
+   # Calculate weight entropy (regime ambiguity)
+   entropy = sv.get_weight_entropy()  # bits
+   max_entropy = np.log2(len(params))
+   print(f"Entropy: {entropy:.2f} / {max_entropy:.2f} bits")
 
-   # Effective number of models
-   eff_k = sv.effective_num_models()
-   print(f"Effective models: {eff_k:.1f} / {len(params)}")
+Low entropy indicates strong evidence for a particular parameter region.
 
-A low effective number of models indicates strong evidence for a
-particular parameter region.
+Extracting Features
+-----------------------
+svmix provides several features useful for feature engineering and analysis:
+
+.. code-block:: python
+
+   # After processing some data
+   belief = sv.get_belief()
+   weighted = sv.get_weighted_params()
+   
+   features = {
+       'vol': belief.vol,                        # Current volatility
+       'var_h': belief.var_h,                    # Uncertainty
+       'weight_entropy': sv.get_weight_entropy(),     # Regime ambiguity
+       'weighted_phi': weighted['phi'],          # Persistence
+       'weighted_nu': weighted['nu'],            # Tail risk
+       'log_likelihood': sv.get_last_log_likelihood()  # Model fit
+   }
+
+See :doc:`features` for detailed guidance on feature interpretation
+and usage in trading algorithms.
 
 Checkpointing
 -------------

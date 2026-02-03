@@ -306,6 +306,10 @@ help:
 	@echo "  pytest           - Run Python test suite"
 	@echo "  pyclean          - Clean Python build artifacts"
 	@echo ""
+	@echo "Documentation targets:"
+	@echo "  docs             - Build and view Sphinx documentation"
+	@echo "  docs-clean       - Clear the generated Sphinx documentation"
+	@echo ""
 	@echo "Other targets:"
 	@echo "  clean            - Remove build artifacts"
 	@echo "  help             - Show this help message"
@@ -334,8 +338,7 @@ PYTHON_LIB_DIR := python/svmix/lib
 SHARED_LIB := $(LIB_DIR)/libsvmix$(SHARED_EXT)
 PYTHON_SHARED_LIB := $(PYTHON_LIB_DIR)/libsvmix$(SHARED_EXT)
 
-.PHONY: pylib pyinstall pywheel pytest pyclean
-.PHONY: python-lib python-install python-wheel python-test python-clean  # Legacy aliases
+.PHONY: pylib pyinstall pywheel pytest pyclean docs
 
 # Build shared library for Python (with OpenMP enabled)
 pylib: $(FASTPF_LIB) | $(BIN_DIR)
@@ -393,3 +396,11 @@ pyclean:
 	find python -name "*.pyo" -delete 2>/dev/null || true
 	find python -name "*~" -delete 2>/dev/null || true
 	@echo "Python artifacts cleaned"
+
+# Build and view Sphinx documentation
+docs:
+	@echo "Building Sphinx documentation..."
+	@$(MAKE) -C python/docs view
+
+docs-clean:
+	@$(MAKE) -C python/docs clean

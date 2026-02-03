@@ -11,8 +11,19 @@ from enum import IntEnum
 
 class Spec(IntEnum):
     """Model specification types.
-    
-    Determines which SV model variant is used and which parameters are required.
+
+    Specifies which stochastic volatility model variant to use.
+
+    Attributes:
+        VOL: Standard SV model with AR(1) log-volatility and Student-t
+            observations. This is the only currently supported specification.
+
+    Note:
+        DRIFT and VOL_DRIFT are reserved for future extensions.
+
+    Example::
+
+        config = SvmixConfig(spec=Spec.VOL, ...)
     """
     VOL = 1        # V1: Stochastic volatility only
     DRIFT = 2      # V2: + Drift in returns (future)
@@ -36,26 +47,73 @@ class Status(IntEnum):
 
 @dataclass
 class Belief:
-    """Belief state from the filter.
-    
-    Represents the filtered estimate of the latent volatility state.
-    
+    """Filtered volatility estimate and posterior state.
+
+    Contains the model-averaged posterior distribution over the current
+    volatility state after observing all data up to time t.
+
     Attributes:
-        mean_h: Mean log-volatility E[h_t | y_{1:t}]
-        var_h: Variance of log-volatility Var[h_t | y_{1:t}]
-        mean_sigma: Mean volatility E[exp(h_t/2) | y_{1:t}]
-        valid: Whether belief is valid (False before first observation)
+        mean_h: Posterior mean of log-volatility h_t (E[h_t | data]).
+            Volatility = exp(h_t / 2). For most uses, prefer the vol property.
+
+        var_h: Posterior variance of log-volatility. Indicates uncertainty.
+            High values (> 0.5) suggest insufficient data, regime changes, or
+            poor parameter specification.
+
+        mean_sigma: Mean volatility exp(mean_h / 2). Equivalent to vol property.
+
+        valid: Whether belief is valid. False before first observation or if
+            filter encountered errors. Always check this before using.
+
+    Properties:
+        vol: Current volatility estimate (standard deviation of returns).
+            **Primary output for applications**. Computed as exp(mean_h / 2).
+
+        log_vol: Log-volatility estimate (mean_h / 2). For diagnostics.
+
+    Example::
+
+        belief = svmix.get_belief()
+        if belief.valid:
+            # Primary volatility estimate
+            current_vol = belief.vol
+            
+            # Annualize if using daily returns
+            annual_vol = current_vol * np.sqrt(252)
+            
+            # Check uncertainty
+            if belief.var_h > 0.5:
+                print(\"High uncertainty\")
+            
+            # 95% prediction interval for next return
+            lower = -1.96 * current_vol
+            upper = +1.96 * current_vol
+
+    See Also:
+        To inspect which parameters the data supports, use
+        :meth:`~svmix.core.Svmix.get_weights` to examine model probabilities.
     """
     mean_h: float
     var_h: float
     mean_sigma: float
     valid: bool
-    
+
+    @property
+    def vol(self) -> float:
+        """Current volatility estimate (exp(mean_h/2))."""
+        import math
+        return math.exp(self.mean_h / 2.0) if self.valid else 0.0
+
+    @property
+    def log_vol(self) -> float:
+        """Log-volatility estimate (mean_h/2)."""
+        return self.mean_h / 2.0 if self.valid else 0.0
+
     def __repr__(self):
         if not self.valid:
             return "Belief(valid=False)"
-        return (f"Belief(mean_h={self.mean_h:.4f}, var_h={self.var_h:.4f}, "
-                f"mean_sigma={self.mean_sigma:.4f})")
+        return (f"Belief(vol={self.vol:.4f}, mean_h={self.mean_h:.4f}, "
+                f"var_h={self.var_h:.4f})")
 
 
 class SvmixError(Exception):

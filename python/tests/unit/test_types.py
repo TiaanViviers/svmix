@@ -50,10 +50,11 @@ def test_belief_dataclass():
     assert belief.mean_sigma == 0.2
     assert belief.valid is True
     
-    # Test repr
+    # Test repr shows vol (computed) and mean_h
     repr_str = repr(belief)
-    assert "mean_h" in repr_str
-    assert "0.2" in repr_str  # mean_sigma formatted
+    assert "vol=" in repr_str
+    assert "mean_h=" in repr_str
+    assert "var_h=" in repr_str
 
 
 def test_exceptions():

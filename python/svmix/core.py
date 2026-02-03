@@ -4,6 +4,7 @@ Core svmix filter implementation.
 Provides the main :class:`Svmix` class for Bayesian volatility filtering.
 """
 
+import math
 from typing import List, Optional
 
 try:
@@ -105,6 +106,7 @@ class Svmix:
         self._handle = handle
         self._freed = False
         self._num_models = config.num_models
+        self._params = list(sv_params)
     
     def free(self):
         """Release C resources. Safe to call multiple times."""
@@ -194,6 +196,78 @@ class Svmix:
         """
         self._check_freed()
         return _native.get_last_log_likelihood(self._handle)
+    
+    def get_weighted_params(self) -> dict:
+        """Get Bayesian Model Average (BMA) parameter estimates.
+
+        Computes weighted average of all model parameters using current
+        posterior model probabilities (weights). These are the exact BMA
+        point estimates, useful for understanding the current regime.
+
+        Returns:
+            Dictionary with keys:
+            - phi: Weighted persistence (0-1)
+            - sigma: Weighted volatility-of-volatility (>0)
+            - nu: Weighted degrees of freedom (>2)
+            - mu: Weighted long-run mean log-volatility
+
+        Example:
+            >>> params = svmix.get_weighted_params()
+            >>> print(f"Current regime: phi={params['phi']:.3f}, nu={params['nu']:.1f}")
+
+        Note:
+            High persistence (phi → 1) indicates shocks persist longer.
+            Low nu (→ 2) indicates heavy tails, extreme events likely.
+        """
+        self._check_freed()
+        weights = self.get_weights()
+        
+        weighted = {
+            'phi': sum(w * p.phi for w, p in zip(weights, self._params)),
+            'sigma': sum(w * p.sigma for w, p in zip(weights, self._params)),
+            'nu': sum(w * p.nu for w, p in zip(weights, self._params)),
+            'mu': sum(w * p.mu for w, p in zip(weights, self._params))
+        }
+        return weighted
+    
+    def get_weight_entropy(self, base: float = 2.0) -> float:
+        """Calculate entropy of model weights.
+
+        Measures regime ambiguity: high entropy means models have similar
+        weights (uncertain which regime), low entropy means one model
+        dominates (confident in regime identification).
+
+        Args:
+            base: Logarithm base. Default 2.0 (bits), use e for nats.
+
+        Returns:
+            Entropy H = -∑ w_i * log(w_i). Range [0, log_base(K)].
+
+        Example:
+            >>> entropy = svmix.get_weight_entropy()  # bits
+            >>> max_entropy = np.log2(config.num_models)
+            >>> ambiguity = entropy / max_entropy  # normalized [0,1]
+
+        Note:
+            High entropy → market regime unclear, risky to trade on volatility signal.
+            Low entropy → model confident in regime, stronger signal.
+        """
+        self._check_freed()
+        weights = self.get_weights()
+        
+        if base == 2.0:
+            log_fn = math.log2
+        elif base == math.e:
+            log_fn = math.log
+        else:
+            log_fn = lambda x: math.log(x) / math.log(base)
+        
+        entropy = 0.0
+        for w in weights:
+            if w > 1e-15:  # Skip near-zero weights to avoid log(0)
+                entropy -= w * log_fn(w)
+        
+        return entropy
     
     def save_checkpoint(self, filepath: str):
         """Save complete filter state to file.

@@ -7,3 +7,5 @@ Type definitions, enumerations, and result structures.
    :members:
    :undoc-members:
    :show-inheritance:
+   :member-order: bysource
+   :exclude-members: __init__, __new__, __weakref__
