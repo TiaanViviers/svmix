@@ -100,9 +100,69 @@ class Belief:
 
     @property
     def vol(self) -> float:
-        """Current volatility estimate (exp(mean_h/2))."""
+        """Annualized volatility in percentage terms (convenience property).
+        
+        Returns volatility as annual percentage (e.g., 18.2 = 18.2%).
+        For more control over units, use :meth:`get_vol` instead.
+        
+        Equivalent to: ``get_vol(annualize=True, as_percentage=True)``
+        """
+        return self.get_vol(annualize=True, as_percentage=True)
+    
+    def get_vol(self, annualize: bool = True, as_percentage: bool = True) -> float:
+        """Get volatility estimate with configurable units.
+        
+        Computes exp(mean_h/2) with optional annualization and percentage conversion.
+        
+        Args:
+            annualize: If True, scale daily vol to annual by multiplying by sqrt(252).
+                      If False, return daily volatility in same units as returns.
+            as_percentage: If True, multiply by 100 to get percentage (e.g., 18.2%).
+                          If False, return as decimal (e.g., 0.182).
+        
+        Returns:
+            Volatility in requested units. Returns 0.0 if belief invalid.
+        
+        Examples:
+            >>> belief = svmix.get_belief()
+            
+            >>> # Annualized percentage (standard finance) - DEFAULT
+            >>> vol = belief.get_vol(annualize=True, as_percentage=True)
+            >>> # e.g., 18.2 means "18.2% annual volatility"
+            
+            >>> # Daily percentage (matches your return scale)
+            >>> vol = belief.get_vol(annualize=False, as_percentage=True)
+            >>> # e.g., 1.15 means "1.15% daily moves"
+            
+            >>> # Daily decimal (for position sizing calculations)
+            >>> vol = belief.get_vol(annualize=False, as_percentage=False)
+            >>> # e.g., 0.0115 means "1.15% daily moves"
+            >>> position_size = capital * (target_risk / vol)
+            
+            >>> # Annualized decimal (for Sharpe ratio, etc.)
+            >>> vol = belief.get_vol(annualize=True, as_percentage=False)
+            >>> # e.g., 0.182 means "18.2% annual volatility"
+            >>> sharpe = annual_return / vol
+        
+        Note:
+            - Daily vol is exp(mean_h/2), matches log-return scale
+            - Annualization multiplies by sqrt(252) trading days
+            - Percentage multiplies by 100 for readability
+        """
         import math
-        return math.exp(self.mean_h / 2.0) if self.valid else 0.0
+        if not self.valid:
+            return 0.0
+        
+        # Base: daily volatility (exp(mean_h/2))
+        daily_vol = math.exp(self.mean_h / 2.0)
+        
+        # Optional annualization
+        vol = daily_vol * math.sqrt(252) if annualize else daily_vol
+        
+        # Optional percentage conversion
+        vol = vol * 100 if as_percentage else vol
+        
+        return vol
 
     @property
     def log_vol(self) -> float:

@@ -71,22 +71,50 @@ Feature Interpretation
 vol: Current Volatility
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Annualized volatility estimate in percentage terms.
+Volatility estimate with configurable units.
 
-**Range:** 0% to ~200% (typical equity: 10-80%)
+**Default (belief.vol):** Annualized percentage (e.g., 18.2 = 18.2% annual)
 
-**Usage:**
-
-- Position sizing (higher vol → smaller positions)
-- Option pricing inputs
-- Risk-adjusted return calculations
-
-**Example:**
+**Flexible units via get_vol():**
 
 .. code-block:: python
 
-   vol = belief.vol  # e.g., 18.2 means 18.2% annualized
-   position_size = base_size / (vol / 15.0)  # Scale by vol
+   # Annualized percentage (default) - standard finance convention
+   vol = belief.get_vol(annualize=True, as_percentage=True)
+   # or simply: vol = belief.vol
+   # e.g., 18.2 means "18.2% annual volatility"
+   
+   # Daily percentage - matches your return scale
+   vol = belief.get_vol(annualize=False, as_percentage=True)
+   # e.g., 1.15 means "1.15% daily moves"
+   
+   # Daily decimal - for calculations
+   vol = belief.get_vol(annualize=False, as_percentage=False)
+   # e.g., 0.0115, use directly in position sizing
+   
+   # Annualized decimal - for Sharpe ratios
+   vol = belief.get_vol(annualize=True, as_percentage=False)
+   # e.g., 0.182
+
+**Range:** 
+- Annualized %: 0-200% (typical equity: 10-80%)
+- Daily decimal: 0.0-2.0 (typical equity: 0.006-0.05)
+
+**Usage examples:**
+
+.. code-block:: python
+
+   # Position sizing with daily volatility
+   daily_vol = belief.get_vol(annualize=False, as_percentage=False)
+   position_size = capital * (target_risk / daily_vol)
+   
+   # Risk-adjusted returns (Sharpe ratio)
+   annual_vol = belief.get_vol(annualize=True, as_percentage=False)
+   sharpe = annual_return / annual_vol
+   
+   # Simple monitoring (human-readable)
+   vol_pct = belief.vol  # Default: annualized %
+   print(f"Current vol: {vol_pct:.1f}%")
 
 var_h: Uncertainty
 ^^^^^^^^^^^^^^^^^^

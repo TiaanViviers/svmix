@@ -571,14 +571,99 @@ refine.
 
 μ is the log-space mean. To get volatility level: ``np.exp(mu / 2)``.
 
-**Pitfall 4**: Forgetting to annualize
+**Pitfall 4**: Using wrong volatility units
 
-If your returns are daily, ``belief.vol`` is daily volatility. To
-annualize: ``belief.vol * np.sqrt(252)``.
+``belief.vol`` returns annualized percentage by default (e.g., 18.2 = 18.2%).
+For daily volatility in decimal form, use ``belief.get_vol(annualize=False, as_percentage=False)``.
 
-**Pitfall 5**: Not monitoring effective_num_models()
+**Pitfall 5**: Too narrow parameter grid
 
-If this drops to 1-2, your grid may be too coarse or misspecified.
+If the true parameters lie outside your grid, the filter will select the
+best available option but performance will degrade.
+
+**Solution**: Start with a wide grid, examine converged weights, then refine.
+
+Output Variables
+----------------
+
+The :class:`~svmix.types.Belief` object contains posterior estimates from
+the filter. Understanding these outputs is essential for practical use.
+
+Volatility: vol and get_vol()
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Simple accessor (.vol)**:
+
+.. code-block:: python
+
+   belief = svmix.get_belief()
+   vol = belief.vol  # Annualized percentage (e.g., 18.2 = 18.2%)
+
+**Flexible method (.get_vol(annualize, as_percentage))**:
+
+.. code-block:: python
+
+   # Annualized percentage (default) - standard finance convention
+   vol = belief.get_vol(annualize=True, as_percentage=True)
+   # e.g., 18.2 means "18.2% annual volatility"
+   
+   # Daily decimal - matches your log-return scale
+   vol = belief.get_vol(annualize=False, as_percentage=False)
+   # e.g., 0.0111 means "1.11% daily moves"
+   position_size = capital * (target_risk / vol)
+   
+   # Daily percentage - human-readable
+   vol = belief.get_vol(annualize=False, as_percentage=True)
+   # e.g., 1.11 means "1.11% daily moves"
+   
+   # Annualized decimal - for Sharpe ratios
+   vol = belief.get_vol(annualize=True, as_percentage=False)
+   # e.g., 0.182 means "18.2% annual volatility"
+   sharpe = annual_return / vol
+
+**Unit conversions**:
+
+- Base: ``exp(mean_h / 2)`` gives daily volatility in decimal
+- Annualization: multiply by ``sqrt(252)`` for trading days
+- Percentage: multiply by ``100`` for readability
+
+**Recommendation**: Use ``.vol`` for monitoring/visualization, use
+``.get_vol()`` with appropriate units for calculations.
+
+Uncertainty: var_h
+^^^^^^^^^^^^^^^^^^
+
+Posterior variance of log-volatility. Higher values indicate model uncertainty.
+
+**Range**: [0, ∞), typically 0.01-0.50
+
+**Interpretation**:
+
+- **var_h < 0.1**: Confident estimate, stable regime
+- **var_h > 0.5**: High uncertainty, possible regime change
+
+**Usage**: Reduce position sizes when ``var_h`` is elevated.
+
+Weighted Parameters
+^^^^^^^^^^^^^^^^^^^
+
+Get Bayesian Model Average (BMA) estimates of model parameters:
+
+.. code-block:: python
+
+   weighted = svmix.get_weighted_params()
+   
+   weighted['phi']    # Average persistence
+   weighted['sigma']  # Average vol-of-vol
+   weighted['nu']     # Average tail heaviness
+   weighted['mu']     # Average long-run mean
+
+These represent the current regime as a weighted mixture of your parameter grid.
+
+**Example**: If ``weighted['phi'] = 0.97``, the market is currently in a
+high-persistence regime where volatility shocks last longer.
+
+See :doc:`features` for complete ML feature extraction guide.
 
 Further Reading
 ---------------
